@@ -1,0 +1,5 @@
+# Keep the pretrained folder but not the pretrained file (since it is too big for github)
+pretrained/*
+sample_imgs/*
+
+!pretrained/.gitkeep
