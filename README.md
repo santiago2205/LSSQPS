@@ -1,7 +1,5 @@
 # Learning Semantic Segmentation with Query Points Supervision
-This is research to see how weakly supervised semantic segmentation with superpixel performs.
-To do it we selected a [balloon](https://github.com/matterport/Mask_RCNN/tree/master/samples/balloon) 
-dataset fully labeled to do the test.
+TODO
 
 ## Prerequisites
 We recommend the user run the code with the environment provided in this repository:
