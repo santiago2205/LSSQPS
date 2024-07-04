@@ -15,36 +15,34 @@ from trainer import train_model
 
 
 @click.command()
-@click.option("--data_directory", required=True, help="Specify the data directory.")
-@click.option("--exp_directory", required=True, help="Specify the experiment directory.")
-@click.option("--epochs", default=25, type=int,
-              help="Specify the number of epochs you want to run the experiment for.")
+@click.option("--data_directory", default='src/NN/Dataset/', help="Specify the data directory.")
+@click.option("--output_directory", required=True, help="Specify the output directory.")
+@click.option("--epochs", default=25, type=int, help="Specify the number of epochs you want to run the experiment for.")
 @click.option("--models", default='DeepLabV3Rn50', type=str, help="Specify the model.")
-@click.option("--n_class", required=True, type=int, help="Specify number of class.")
+@click.option("--num_class", default=4, type=int, help="Specify number of class.")
 @click.option("--batch_size", default=4, type=int, help="Specify the batch size for the dataloader.")
 @click.option('--patience', required=False, type=int, default=15,
               help='Patience before reducing LR (ReduceLROnPlateau)')
 @click.option("--train_percent", default=1.0, type=float, help="Specify the percentage of image to train (0.1 - 1)")
 
-def main(data_directory, exp_directory, epochs, batch_size, patience, train_percent, models, n_class):
+def main(data_directory, output_directory, epochs, batch_size, patience, train_percent, models, num_class):
     # Select models
     if models == 'DeepLabV3Rn50':
-        model = createDeepLabv3Rn50(n_class)
+        model = createDeepLabv3Rn50(num_class)
     elif models == 'DeepLabV3Rn101':
-        model = createDeepLabv3Rn101(n_class)
+        model = createDeepLabv3Rn101(num_class)
     elif models == 'FCNetRn50':
-        model = createFCNRn50(n_class)
+        model = createFCNRn50(num_class)
     elif models == 'FCNetRn101':
-        model = createFCNRn101(n_class)
+        model = createFCNRn101(num_class)
     elif models == 'UNet':
-        model = createUNet(n_class)
+        model = createUNet(num_class)
     model.train()
     data_directory = Path(data_directory)
 
     # Create the experiment directory if not present
-    exp_directory = Path(exp_directory)
-    if not exp_directory.exists():
-        exp_directory.mkdir()
+    output_directory = Path(output_directory)
+    os.makedirs(output_directory, exist_ok=True)
 
     # Specify the optimizer with a lower learning rate
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -64,7 +62,7 @@ def main(data_directory, exp_directory, epochs, batch_size, patience, train_perc
                   '- Percent of data to train: ' + str(int(train_percent * 100)) + '%' + '\n',
                   '- Number of images to train: ' + str(int(np.ceil(len(num_train)*train_percent))) + '\n']
 
-    with open(str(exp_directory) + '/Parameters.txt', 'w') as f:
+    with open(str(output_directory) + '/Parameters.txt', 'w') as f:
         f.writelines(parameters)
         f.close()
 
@@ -74,15 +72,15 @@ def main(data_directory, exp_directory, epochs, batch_size, patience, train_perc
 
     # Train model
     _ = train_model(model,
-                    n_class,
+                    num_class,
                     dataloaders,
                     optimizer,
                     scheduler,
-                    bpath=exp_directory,
+                    bpath=output_directory,
                     num_epochs=epochs)
 
     # Save the trained model
-    torch.save(model, exp_directory / 'weights.pt')
+    torch.save(model, output_directory / 'weights.pt')
 
 
 if __name__ == "__main__":

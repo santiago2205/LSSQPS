@@ -70,20 +70,6 @@ def createFCNRn101(outputchannels=1):
     model.train()
     return model
 
-def createUNet(outputchannels=1):
-    """U-Net class with custom head
-
-    Args:
-        outputchannels (int, optional): The number of output channels
-        in your dataset masks. Defaults to 1.
-
-    Returns:
-        model: Returns the U-Net model with the ResNet50 backbone.
-    """
-    model = build_unet(outputchannels)
-
-    return model
-
 class conv_block(nn.Module):
     def __init__(self, in_c, out_c):
         super().__init__()
@@ -92,6 +78,7 @@ class conv_block(nn.Module):
         self.conv2 = nn.Conv2d(out_c, out_c, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(out_c)
         self.relu = nn.ReLU()
+
     def forward(self, inputs):
         x = self.conv1(inputs)
         x = self.bn1(x)
@@ -106,6 +93,7 @@ class encoder_block(nn.Module):
         super().__init__()
         self.conv = conv_block(in_c, out_c)
         self.pool = nn.MaxPool2d((2, 2))
+
     def forward(self, inputs):
         x = self.conv(inputs)
         p = self.pool(x)
@@ -115,15 +103,16 @@ class decoder_block(nn.Module):
     def __init__(self, in_c, out_c):
         super().__init__()
         self.up = nn.ConvTranspose2d(in_c, out_c, kernel_size=2, stride=2, padding=0)
-        self.conv = conv_block(out_c+out_c, out_c)
+        self.conv = conv_block(out_c + out_c, out_c)
+
     def forward(self, inputs, skip):
         x = self.up(inputs)
-        x = torch.cat([x, skip], axis=1)
+        x = torch.cat([x, skip], dim=1)
         x = self.conv(x)
         return x
 
-class build_unet(nn.Module, num_class):
-    def __init__(self):
+class build_unet(nn.Module):
+    def __init__(self, num_class=1):
         super().__init__()
         """ Encoder """
         self.e1 = encoder_block(3, 64)
@@ -139,6 +128,7 @@ class build_unet(nn.Module, num_class):
         self.d4 = decoder_block(128, 64)
         """ Classifier """
         self.outputs = nn.Conv2d(64, num_class, kernel_size=1, padding=0)
+
     def forward(self, inputs):
         """ Encoder """
         s1, p1 = self.e1(inputs)
@@ -155,3 +145,17 @@ class build_unet(nn.Module, num_class):
         """ Classifier """
         outputs = self.outputs(d4)
         return outputs
+
+def createUNet(outputchannels):
+    """U-Net class with custom head
+
+    Args:
+        outputchannels (int, optional): The number of output channels
+        in your dataset masks. Defaults to 1.
+
+    Returns:
+        model: Returns the U-Net model with the ResNet50 backbone.
+    """
+    model = build_unet(outputchannels)
+
+    return model

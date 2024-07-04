@@ -34,8 +34,8 @@ class EarlyStopper:
 
 EPS = 1e-6
 
-def get_weight(file_name, n_class):
-    num_classes = n_class + 1
+def get_weight(file_name, num_class):
+    num_classes = num_class + 1
     num_pixels_per_class = [0] * num_classes
     for sample in iter(file_name):
         labels = sample['target']
@@ -61,7 +61,7 @@ def ponderated_masked_mse(pred, labels, mask, class_count):
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     return torch.mean(loss)
 
-def train_model(model, n_class, dataloaders, optimizer, scheduler, bpath, num_epochs):
+def train_model(model, num_class, dataloaders, optimizer, scheduler, bpath, num_epochs):
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_loss = 1e10
@@ -70,10 +70,10 @@ def train_model(model, n_class, dataloaders, optimizer, scheduler, bpath, num_ep
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Set Jaccad index (IoU)
-    jaccard = JaccardIndex(num_classes=n_class, ignore_index=0, average='micro').to(device)
+    jaccard = JaccardIndex(task="multiclass", num_classes=num_class, ignore_index=0, average='micro').to(device)
 
     # Get percentage of labeled per class
-    class_count = get_weight(dataloaders['Train'], n_class)
+    class_count = get_weight(dataloaders['Train'], num_class)
     class_count_expanded = torch.tensor(class_count).unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).permute(1, 0, 2, 3).to(device)
 
     model.to(device)
@@ -109,8 +109,8 @@ def train_model(model, n_class, dataloaders, optimizer, scheduler, bpath, num_ep
                 target = sample['target'].to(device)
 
                 # One hot encoding
-                target_ohe = F.one_hot(target.to(torch.int64), num_classes=n_class+1).squeeze(1).permute(0, 3, 1, 2).float()
-                target_ohe = target_ohe[:, 1:n_class+1, :, :]
+                target_ohe = F.one_hot(target.to(torch.int64), num_classes=num_class+1).squeeze(1).permute(0, 3, 1, 2).float()
+                target_ohe = target_ohe[:, 1:num_class+1, :, :]
 
                 # zero the parameter gradients
                 optimizer.zero_grad()

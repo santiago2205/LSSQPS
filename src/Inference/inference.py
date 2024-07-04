@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import os
 import click
-import unet
 from PIL import Image, ImageFilter
 from torchvision.utils import save_image
 from torchvision import transforms
@@ -13,13 +12,13 @@ from torch.nn import functional as F
 from torchmetrics import JaccardIndex
 
 @click.command()
-@click.option("--data_directory", required=True, help="Specify the data directory.")
-@click.option("--exp_directory", required=True, help="Specify the experiment directory.")
+@click.option("--data_directory", default='src/NN/Dataset/', help="Specify the data directory.")
+@click.option("--output_directory", required=True, help="Specify the experiment directory.")
 
 
-def main(data_directory, exp_directory):
+def main(data_directory, output_directory):
     # Path to folder train output
-    path_train = exp_directory
+    path_train = output_directory
 
     # Path to Test folder
     path_test = data_directory + '/Test/'
@@ -41,7 +40,7 @@ def main(data_directory, exp_directory):
     file_name = os.listdir(path_test + 'Images/')
 
     # Jaccard Index (IoU)
-    jaccard = JaccardIndex(num_classes=8,  ignore_index=0, average='micro').to(device)
+    jaccard = JaccardIndex(task="multiclass", num_classes=4,  ignore_index=0, average='micro').to(device)
 
     # Listo of color for each class
     colors = [[0, 0, 0],  # Black
@@ -49,9 +48,6 @@ def main(data_directory, exp_directory):
               [0, 255, 0],  # Green
               [0, 0, 255],  # Blue
               [255, 255, 0],  # Yellow
-              [0, 255, 255],  # Green
-              [255, 0, 255],  # Blue
-              [125, 125, 125],  # Yellow
               ]
 
     iou_mean = 0
@@ -59,18 +55,19 @@ def main(data_directory, exp_directory):
         image_path = path_test + 'Images/' + img
         target_path = path_test + 'Target/' + img.split('.')[0] + '.png'
         with open(image_path, "rb") as image_file, open(target_path, "rb") as target_file:
-            image = Image.open(image_file)
-            image = image.convert("RGB")
-            target = Image.open(target_file)
-            target = target.convert("L")
+            image = Image.open(image_file).convert("RGB")
+            target = Image.open(target_file).convert("L")
 
             transform_img = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
-            transform_targ = transforms.Compose([transforms.Resize(512), transforms.PILToTensor()])
+            transform_targ = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
+
             image = transform_img(image).unsqueeze(0)
             target = transform_targ(target)
+
             # One hot encoding
-            target_ohe = F.one_hot(target.to(torch.int64), num_classes=8).permute(0, 3, 1, 2).float().to(device)
-            # target_ohe = target_ohe[:, 1:5, :, :]
+            target_ohe = F.one_hot(target.to(torch.int64), num_classes=5).permute(0, 3, 1, 2).float().to(device)
+            target_ohe = target_ohe[:, 1:5, :, :]
+
         with torch.no_grad():
             img_inference = model(image.type(torch.cuda.FloatTensor))['out']
 
@@ -82,19 +79,21 @@ def main(data_directory, exp_directory):
             output_image = np.zeros((512, 512, 3), dtype=np.uint8)
         else:
             output_image = np.zeros((512, 512, 3), dtype=np.uint8)
-            for c in range(5):
+            for c in range(4):
                 class_probs = img_inference.cpu().detach().numpy()[0][c] > 0.5
                 class_color = np.repeat(np.expand_dims(class_probs, 2), 3, axis=2) * colors[c]
                 output_image = np.maximum(output_image, class_color)
 
         # Convert target to numpy array and assign color to each class
         target_np = np.array(target)
+        target_np_int = np.round(target_np * 255).astype(np.uint8)
         target_color = np.zeros((512, 512, 3), dtype=np.uint8)
         for c in range(1, 5):
-            class_pixels = target_np == c
-            class_color = np.repeat(np.expand_dims(class_pixels, 3), 3, axis=3) * colors[c]
-            class_color = np.squeeze(class_color, 0)
+            class_pixels = target_np_int == c
+            class_color = np.repeat(np.expand_dims(class_pixels, axis=-1), 3, axis=-1) * colors[c]
             target_color = np.maximum(target_color, class_color)
+        target_color = np.squeeze(target_color, axis=0)
+  
 
         # Plot the input image and the predicted output
         fig = plt.figure(figsize=(15, 5))

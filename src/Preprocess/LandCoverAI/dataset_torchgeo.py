@@ -8,19 +8,27 @@ from torchgeo.datasets import LandCoverAI, DeepGlobeLandCover
 from PIL import Image, ImageDraw
 import sys
 import argparse
-sys.path.insert(0, "/home/name/LSSQPS/src/Preprocess/DAL-HERS/pybuild")
-sys.path.insert(0, "/home/name/LSSQPS/src/Preprocess/DAL-HERS/pybuild")
-sys.path.append(os.path.abspath('/home/name/LSSQPS/src/Preprocess/DAL-HERS'))
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+dal_hers_path = os.path.join(script_dir, '../DAL-HERS/pybuild')
+analysis_path = os.path.join(script_dir, '../DAL-HERS')
+
+sys.path.insert(0, dal_hers_path)
+sys.path.insert(0, dal_hers_path)
+sys.path.append(os.path.abspath(analysis_path))
+
 from analysis_single_nC import *
+pd.set_option("future.no_silent_downcasting", True)
 
 
 # input arguments
 parser = argparse.ArgumentParser(description='Create a mask from superpixel and points on a folder of images',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--pretrained', required=True, help='Path to the pretrained model, eg:/home/name/LSSQPS/src/Preprocess/DAL-HERS/pretrained/DAL_loss=bce-rgb_date=23Feb2021.tar')
-parser.add_argument('--path_dataset', required=True, help='Path to dataset folder, eg: /home/name/LSSQPS/src/Preprocess/LandCoverAI/Dataset/')
-parser.add_argument('--path_dataset_nn', required=True, help='Path to dataset NN folder, eg: /home/name/LSSQPS/src/NN/Dataset/')
-parser.add_argument('--output_dir', default='DAL-HERS/output/', help='Path to output folder superpixel')
+parser.add_argument('--pretrained', default='src/Preprocess/DAL-HERS/pretrained/DAL_loss=bce-rgb_date=23Feb2021.tar', help='Path to the pretrained model, eg: src/Preprocess/DAL-HERS/pretrained/DAL_loss=bce-rgb_date=23Feb2021.tar')
+parser.add_argument('--path_dataset', default='src/Preprocess/LandCoverAI/', help='Path to dataset folder, eg: src/Preprocess/LandCoverAI/Dataset/')
+parser.add_argument('--path_dataset_nn', default='src/NN/Dataset/', help='Path to dataset NN folder, eg: src/NN/Dataset/')
+parser.add_argument('--output_dir', default='src/Preprocess/DAL-HERS/output/', help='Path to output folder superpixel')
 parser.add_argument('--output_suff', default='', help='suffix to the output file')
 parser.add_argument('--edge', default=False, help='whether to incorporate edge information')
 parser.add_argument('--nC', default=300, type=int, help='the number of desired superpixels')
@@ -32,13 +40,13 @@ args = parser.parse_args()
 # Define a function to generate full masks from image masks
 def draw_full_mask():
     # Set the output directory path for the full masks
-    full_mask_path = args.path_dataset + 'Masks/'
+    full_mask_path = args.path_dataset + 'Dataset/Masks/'
 
     # Create the output directory if it doesn't already exist
     os.makedirs(full_mask_path, exist_ok=True)
 
     # Read the list of filenames from the directory where the image masks are stored
-    file_name = os.listdir(args.path_dataset + 'raw_dataset/output/')
+    file_name = os.listdir(args.path_dataset + 'output/')
 
     # Loop through each image filename in the list
     for image in tqdm(file_name):
@@ -48,7 +56,7 @@ def draw_full_mask():
             base_name = image.split('.')[0]
 
             # Read the corresponding image mask file with "_m.png" extension using the Pillow library's Image class
-            img = Image.open(f'{args.path_dataset}raw_dataset/output/{base_name}_m.png').convert('L')
+            img = Image.open(f'{args.path_dataset}output/{base_name}_m.png').convert('L')
 
             # resized to 450 pixels
             w, h = img.size
@@ -65,20 +73,20 @@ def draw_full_mask():
 # Define a function to resize the original images to the same size as the superpixel images
 def resize_origin2superpixel():
     # Set the input directory path for the original images
-    origin_input_path = args.path_dataset + 'Images/'
+    origin_input_path = args.path_dataset + 'Dataset/Images/'
 
     # Create the input directory if it doesn't already exist
     os.makedirs(origin_input_path, exist_ok=True)
 
     # Read the list of filenames from the directory where the image masks are stored
-    file_name = os.listdir(args.path_dataset + 'raw_dataset/output/')
+    file_name = os.listdir(args.path_dataset + 'output/')
 
     # Loop through each image filename in the list
     for image in tqdm(file_name):
         # Check if the file has the ".jpg" extension
         if image.endswith('.jpg'):
             # Read the original image using the Pillow library's Image class
-            img = Image.open(f'{args.path_dataset}raw_dataset/output/{image}').convert('RGB')
+            img = Image.open(f'{args.path_dataset}output/{image}').convert('RGB')
 
             # resized to 450 pixels
             w, h = img.size
@@ -98,12 +106,12 @@ def points_image(number_points):
     img_point = {}
 
     # Read the list of filenames from the directory where the original images are stored
-    file_name = os.listdir(args.path_dataset + 'Images/')
+    file_name = os.listdir(args.path_dataset + 'Dataset/Images/')
 
     # Loop through each image filename in the list
     for image in tqdm(file_name):
         # Read the image label for the current image using the Pillow library's Image class
-        img_label = Image.open(args.path_dataset + 'Masks/' + image.split('.')[0] + '.png').convert('L')
+        img_label = Image.open(args.path_dataset + 'Dataset/Masks/' + image.split('.')[0] + '.png').convert('L')
 
         # Create nested dictionaries to store the point data for each label class (0-4)
         img_point[image] = {}
@@ -167,17 +175,17 @@ def random_points(number, img_label):
 
 def draw_image_point(img_points):
     # Create a directory to store the images with points drawn on them, if it doesn't already exist
-    image_point_path = args.path_dataset + 'Images_Points/'
+    image_point_path = args.path_dataset + 'Dataset/Images_Points/'
     os.makedirs(image_point_path, exist_ok=True)
 
     # Get a list of all the image file names in the input directory
-    file_name = os.listdir(args.path_dataset + 'Images/')
+    file_name = os.listdir(args.path_dataset + 'Dataset/Images/')
 
     # For each image, open it, create a new image with the same dimensions, and draw points of different colors
     # on it based on the points associated with each class of the image in img_points
     for image in tqdm(file_name):
         # Open the image and convert it to RGB mode
-        img = Image.open(f'{args.path_dataset}Images/{image}').convert('RGB')
+        img = Image.open(f'{args.path_dataset}Dataset/Images/{image}').convert('RGB')
 
         # Create a new ImageDraw object to draw on the image
         draw = ImageDraw.Draw(img)
@@ -192,139 +200,63 @@ def draw_image_point(img_points):
         # Save the modified image to the directory created earlier, using the original image file name as a basis
         img.save(image_point_path + image.split('.')[0] + '.png')
 
+def update_aux_class(point, label, aux_class, data):
+    key = str(data[point[1] - 1, point[0] - 1])
+    if key in aux_class:
+        aux_class[key][label] += 1
+    else:
+        aux_class[key] = {'points_nothing': 0, 'points_building': 0, 'points_woodland': 0, 'points_water': 0, 'points_road': 0}
+        aux_class[key][label] = 1
 
 def draw_mask_from_point(img_points):
     # Create directory to save CSV files
-    save_csv_path = args.path_dataset + args.output_dir + str(args.nC) + '/Masks/csv/'
+    save_csv_path = args.output_dir + str(args.nC) + '/Masks/csv/'
     os.makedirs(save_csv_path, exist_ok=True)
 
     # Create directory to save superpixel masks
-    mask_superpixel_path = args.path_dataset + 'Masks_Superpixel/'
+    mask_superpixel_path = args.path_dataset + 'Dataset/Masks_Superpixel/'
     os.makedirs(mask_superpixel_path, exist_ok=True)
 
     # Get list of image file names in the Images directory
-    file_name = os.listdir(args.path_dataset + 'Images/')
+    file_name = os.listdir(args.path_dataset + 'Dataset/Images/')
 
     # Iterate over each image in the Images directory
     for image in tqdm(file_name):
         aux_class = {}
 
-        # Open CSV file for the current image
-        df_csv = pd.read_csv(
-            args.path_dataset + args.output_dir + str(args.nC) + '/csv/' + image.split('.')[0] + '.csv', header=None)
+        # Load the CSV file as a numpy array for the current image
+        csv_path = os.path.join(args.output_dir, str(args.nC), 'csv', image.split('.')[0] + '.csv')
+        data = np.genfromtxt(csv_path, delimiter=',', dtype=str)
 
-        # Iterate over each point labeled as "nothing" in the current image
-        for point in img_points[image]['points_nothing']:
-            # Check if the label for the current point has already been encountered
-            if str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1]) in aux_class.keys():
-                # Increment the count of points labeled as "nothing" for the current label
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])]['points_nothing'] += 1
-            else:
-                # Add a new label to the dictionary and set the count of points labeled as "nothing" to 1
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])] = {'points_nothing': 1,
-                                                                                       'points_building': 0,
-                                                                                       'points_woodland': 0,
-                                                                                       'points_water': 0,
-                                                                                       'points_road': 0}
+        # Update aux_class for each point type
+        for point_type in ['points_nothing', 'points_building', 'points_woodland', 'points_water', 'points_road']:
+            for point in img_points[image][point_type]:
+                update_aux_class(point, point_type, aux_class, data)
 
-        # Iterate over each point labeled as "building" in the current image
-        for point in img_points[image]['points_building']:
-            # Check if the label for the current point has already been encountered
-            if str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1]) in aux_class.keys():
-                # Increment the count of points labeled as "building" for the current label
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])]['points_building'] += 1
-            else:
-                # Add a new label to the dictionary and set the count of points labeled as "building" to 1
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])] = {'points_nothing': 0,
-                                                                                       'points_building': 1,
-                                                                                       'points_woodland': 0,
-                                                                                       'points_water': 0,
-                                                                                       'points_road': 0}
+        # Replace values in the numpy array based on the majority class
+        replace_value = {'points_nothing': 'a', 'points_building': 'b', 'points_woodland': 'c', 'points_water': 'd', 'points_road': 'e'}
+        for key, classes in aux_class.items():
+            max_class = max(classes, key=classes.get)
+            data[data == key] = replace_value[max_class]
 
-        # Iterate over each point labeled as "building" in the current image
-        for point in img_points[image]['points_building']:
-            # Check if the label for the current point has already been encountered
-            if str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1]) in aux_class.keys():
-                # Increment the count of points labeled as "building" for the current label
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])]['points_building'] += 1
-            else:
-                # Add a new label to the dictionary and set the count of points labeled as "woodland" to 1
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])] = {'points_nothing': 0,
-                                                                                       'points_building': 0,
-                                                                                       'points_woodland': 1,
-                                                                                       'points_water': 0,
-                                                                                       'points_road': 0}
+        # Replace the class labels with integer values
+        data[data == 'a'] = '1'
+        data[data == 'b'] = '2'
+        data[data == 'c'] = '3'
+        data[data == 'd'] = '4'
+        data[data == 'e'] = '5'
+    
+        # Convert data to numeric array for PIL conversion
+        data = data.astype(np.uint8)
 
-        # Iterate over each point labeled as "building" in the current image
-        for point in img_points[image]['points_building']:
-            # Check if the label for the current point has already been encountered
-            if str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1]) in aux_class.keys():
-                # Increment the count of points labeled as "building" for the current label
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])]['points_building'] += 1
-            else:
-                # Add a new label to the dictionary and set the count of points labeled as "water" to 1
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])] = {'points_nothing': 0,
-                                                                                       'points_building': 0,
-                                                                                       'points_woodland': 0,
-                                                                                       'points_water': 1,
-                                                                                       'points_road': 0}
-
-        # Iterate over each point labeled as "building" in the current image
-        for point in img_points[image]['points_building']:
-            # Check if the label for the current point has already been encountered
-            if str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1]) in aux_class.keys():
-                # Increment the count of points labeled as "building" for the current label
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])]['points_building'] += 1
-            else:
-                # Add a new label to the dictionary and set the count of points labeled as "road" to 1
-                aux_class[str(df_csv.values[int(point[1]) - 1, int(point[0]) - 1])] = {'points_nothing': 0,
-                                                                                       'points_building': 0,
-                                                                                       'points_woodland': 0,
-                                                                                       'points_water': 0,
-                                                                                       'points_road': 1}
-
-        # iterate over each superpixel label in the input image
-        for key in aux_class:
-            # determine the maximum class label assigned to the current superpixel label
-            max_class = max(aux_class[key], key=aux_class[key].get)
-
-            # map the superpixel label to a corresponding class label
-            if max_class == 'points_nothing':
-                df_csv.replace(to_replace=int(key), value='a', inplace=True)
-            elif max_class == 'points_building':
-                df_csv.replace(to_replace=int(key), value='b', inplace=True)
-            elif max_class == 'points_woodland':
-                df_csv.replace(to_replace=int(key), value='c', inplace=True)
-            elif max_class == 'points_water':
-                df_csv.replace(to_replace=int(key), value='d', inplace=True)
-            elif max_class == 'points_road':
-                df_csv.replace(to_replace=int(key), value='e', inplace=True)
-
-        # if there are more than two classes present in the image
-        if len(aux_class) > 2:
-            # replace the class labels with integer values
-            list_supix = range(0, args.nC + 1)
-            df_csv.replace(to_replace=list_supix, value=0, inplace=True)
-            df_csv.replace(to_replace='a', value=1, inplace=True)
-            df_csv.replace(to_replace='b', value=2, inplace=True)
-            df_csv.replace(to_replace='c', value=3, inplace=True)
-            df_csv.replace(to_replace='d', value=4, inplace=True)
-            df_csv.replace(to_replace='e', value=5, inplace=True)
-
-        # save the resulting image segmentation mask as a CSV file
-        df_csv.to_csv(save_csv_path + image.split('.')[0] + '.csv', header=None, index=None)
-
-        # load the CSV file as a numpy array
-        my_data = np.genfromtxt(save_csv_path + image.split('.')[0] + '.csv', delimiter=',', dtype=np.uint8)
-
-        # convert the numpy array to a PIL image and save it as a PNG file
-        im_mask = Image.fromarray(my_data)
-        im_mask.save(mask_superpixel_path + image.split('.')[0] + '.png')
+        # Save the resulting image segmentation mask as a PNG file
+        im_mask = Image.fromarray(data)
+        im_mask.save(os.path.join(mask_superpixel_path, image.split('.')[0] + '.png'))
 
 
 def copy_split_file_in_neural_network():
     # Get a list of image files from the dataset directory
-    image_list = np.array(os.listdir(args.path_dataset + 'Images/'))
+    image_list = np.array(os.listdir(args.path_dataset + 'Dataset/Images/'))
 
     # Define paths for the directories to store training, validation and testing data for neural network
     deeplab_train_img_path = f'{args.path_dataset_nn}Train/Images/'
@@ -363,28 +295,26 @@ def copy_split_file_in_neural_network():
         # Copy image and mask files to the respective directories
         for file in image_names:
             # Copy image file to the respective directory
-            shutil.copyfile(args.path_dataset + 'Images/' + file.split('.')[0] + '.jpg',
+            shutil.copyfile(args.path_dataset + 'Dataset/Images/' + file.split('.')[0] + '.jpg',
                             args.path_dataset_nn + subset + '/Images/' + file.split('.')[0] + '.jpg')
 
             # Copy mask file to the respective directory for testing subset
             if subset == 'Test':
-                shutil.copyfile(args.path_dataset + 'Masks/' + file.split('.')[0] + '.png',
+                shutil.copyfile(args.path_dataset + 'Dataset/Masks/' + file.split('.')[0] + '.png',
                                 args.path_dataset_nn + subset + '/Target/' + file.split('.')[0] + '.png')
             # Copy mask file to the respective directory for training and validation subsets
             else:
-                shutil.copyfile(args.path_dataset + 'Masks/' + file.split('.')[0] + '.png',
+                shutil.copyfile(args.path_dataset + 'Dataset/Masks/' + file.split('.')[0] + '.png',
                                 args.path_dataset_nn + subset + '/Target/' + file.split('.')[0] + '.png')
 
 if __name__ == '__main__':
     print('Start')
-    print('Download Dataset')
-    dataset = LandCoverAI(root=args.path_dataset, download=True, checksum=True)
     print("Draw full mask")
     draw_full_mask()
     print("Resize image to superpixel size")
     resize_origin2superpixel()
     print("Superpixel")
-    superpixel(args.nC, args.pretrained, args.path_dataset + 'Images/', args.path_dataset + args.output_dir,
+    superpixel(args.nC, args.pretrained, args.path_dataset + 'Dataset/Images/', args.output_dir,
                args.output_suff, args.edge, args.device)
     print("Generate random points")
     json_random_point = points_image(args.nP)
