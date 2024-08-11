@@ -6,7 +6,7 @@
 > [Santiago Rivier](https://www.linkedin.com/in/santiago-rivier/), [Carlos Hinojosa](https://carloshinojosa.me/), [Silvio Giancola](https://www.silviogiancola.com/)\*, [Bernard Ghanem](https://www.bernardghanem.com/)\*
 > In ICIP 2024.
 
-> Paper: TODO<br>
+> Paper: [Learning Semantic Segmentation with Query Points Supervision](https://arxiv.org/abs/2309.05490)<br>
 
 > **Abstract:** *Semantic segmentation is crucial in remote sensing, where high-resolution satellite images are segmented into meaningful regions. Recent advancements in deep learning have significantly improved satellite image segmentation.
 > However, most of these methods are typically trained in fully supervised settings that require high-quality pixel-level annotations, which are expensive and time-consuming to obtain.
@@ -95,7 +95,7 @@ If you find this work useful for your research, please cite our paper:
 @article{rivier2024learning,
   title={Learning Semantic Segmentation with Query Points Supervision},
   author={Rivier, Santiago and Hinojosa, Carlos and Giancola, Silvio and Ghanem, Bernard},
-  journal={arXiv preprint TODO},
+  journal={arXiv preprint arXiv:2309.05490},
   year={2024}
 }
 ```
