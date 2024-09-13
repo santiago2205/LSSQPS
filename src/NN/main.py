@@ -48,7 +48,7 @@ def main(data_directory, output_directory, epochs, batch_size, patience, train_p
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     # Configurate the reduction of learning rate
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=patience)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=patience)
 
     # Read number of file to train
     num_train = os.listdir(str(data_directory) + '/Train/Images/')

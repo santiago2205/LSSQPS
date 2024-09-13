@@ -120,6 +120,7 @@ def train_model(model, num_class, dataloaders, optimizer, scheduler, bpath, num_
                     outputs = model(inputs)['out']
 
                     loss = ponderated_masked_mse(outputs, target_ohe, target, class_count_expanded)
+                    
                     batchsummary['IoU'] = jaccard(outputs, target_ohe.int()).item()
 
                     # backward + optimize only if in training phase
