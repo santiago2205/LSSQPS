@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import torch
 from PIL import Image
-from torchmetrics import JaccardIndex
+from torchmetrics.classification import MulticlassJaccardIndex
 from torch.nn import functional as F
 from torchvision.utils import save_image
 from tqdm import tqdm
@@ -70,7 +70,7 @@ def train_model(model, num_class, dataloaders, optimizer, scheduler, bpath, num_
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Set Jaccad index (IoU)
-    jaccard = JaccardIndex(task="multiclass", num_classes=num_class, ignore_index=0, average='micro').to(device)
+    jaccard = MulticlassJaccardIndex(num_classes=num_class, ignore_index=0, average='micro', zero_division=0).to(device)
 
     # Get percentage of labeled per class
     class_count = get_weight(dataloaders['Train'], num_class)
