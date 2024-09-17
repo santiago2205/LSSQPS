@@ -70,7 +70,7 @@ def train_model(model, num_class, dataloaders, optimizer, scheduler, bpath, num_
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Set Jaccad index (IoU)
-    jaccard = MulticlassJaccardIndex(num_classes=num_class, ignore_index=0, average='micro', zero_division=0).to(device)
+    # jaccard = MulticlassJaccardIndex(num_classes=num_class, ignore_index=0, average='micro', zero_division=0).to(device)
 
     # Get percentage of labeled per class
     class_count = get_weight(dataloaders['Train'], num_class)
@@ -121,7 +121,7 @@ def train_model(model, num_class, dataloaders, optimizer, scheduler, bpath, num_
 
                     loss = ponderated_masked_mse(outputs, target_ohe, target, class_count_expanded)
                     
-                    batchsummary['IoU'] = jaccard(outputs, target_ohe.int()).item()
+                    # batchsummary['IoU'] = jaccard(outputs, target_ohe.int()).item()
 
                     # backward + optimize only if in training phase
                     if phase == 'Train':
